@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-**# Measures #1
+**# Measures #**
 
 *** 주요 변수 정리 ***
 
@@ -146,9 +146,6 @@ tab 지역, m
 gen year = 2016, 2017, 2018, 2019, 2020
 gen period = 0  // 2016=0, 2017=1, 2018=2, 2019=3, 2020=4로 코딩
 gen covid = 0  // 2016~2019년에는 0으로 코딩, 2020년에는 1로 코딩
-
-
-**# 그외 변수정리 #2
 
 
 
