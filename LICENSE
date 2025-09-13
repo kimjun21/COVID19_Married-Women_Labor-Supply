@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 kimjun21
+Copyright (c) 2025 Jun Kim (kimjun21@ewhain.net)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,150 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+**# Measures #1
+
+*** 주요 변수 정리 ***
+
+** 종속변수 **
+gen 종속변수 = (일한개월수*4.4*주당근로시간)/52.1
+tab 종속변수, m
+
+* 일한개월수 *
+label variable p**02_6 "일한개월수 (p**02_6)"
+rename p**02_6 일한개월수
+tab 일한개월수, m
+recode 일한개월수 (99=.)
+tab 일한개월수, m
+* 결측치: 99
+
+* 주당근로시간 *
+label variable p**02_8 "주당근로시간 (p**02_8)"
+rename p**02_8 주당근로시간
+tab 주당근로시간, m
+recode 주당근로시간 (999=.)
+tab 주당근로시간, m
+* 결측치: 999
+
+** 처치변수 **
+** 가족만 **
+* 1. 핵심 변수 생성
+gen is_father = (가구주와관계 == 10 & 성별 == 1)
+gen is_mother = (가구주와관계 == 20 & 성별 == 2)
+gen iis_child  = inrange(가구주와관계, 11, 19)  // 첫째~아홉째 자녀
+
+* 2. 구성원 수 계산
+egen num_father = total(is_father), by(가구id)
+egen num_mother = total(is_mother), by(가구id)
+egen num_child  = total(iis_child),  by(가구id)
+egen num_total  = count(가구주와관계),   by(가구id)
+
+* 3. 핵가족 조건 정의
+gen nuclear_family = (num_father == 1 & num_mother == 1 & ///
+                      num_total == num_father + num_mother + num_child & ///
+                      num_child >= 1)
+
+** 자녀유무 **
+* 1. 연령이 18세 이하인 경우 자녀로 표시
+gen is_child = (연령 <= 18)
+* 2. 가구id 기준으로, 해당 가구에 is_child==1인 사람이 하나라도 있으면 1
+egen 자녀유무 = max(is_child), by(가구id)
+
+** 자녀연령 **
+* 1. 연령이 6세 이하인 경우 자녀로 표시
+gen is_under6 = (연령 <= 6)
+* 2. 가구id 기준으로, 해당 가구에 is_under6==1인 사람이 하나라도 있으면 1
+egen 자녀연령 = max(is_under6), by(가구id)
+
+** 상호작용항 **
+gen covid_자녀연령 = covid*자녀연령
+gen period_자녀연령 = period*자녀연령
+
+
+** 공변량 **
+* 연령 *
+gen 연령 = 20**-태어난연도
+tab 연령, m
+
+* 태어난연도 *
+tab 태어난연도, m
+recode 태어난연도 (9999=.)
+tab 태어난연도, m
+* 결측치: 9999
+
+* 연령제곱
+gen 연령제곱 = 연령^2
+tab 연령제곱, m
+
+* 교육수준
+gen 교육수준 = .
+* 고졸 이하: 무학~고등학교
+replace 교육수준 = 0 if inlist(교육수준1, 2,3,4,5)
+* 전문대 졸업 또는 수료
+replace 교육수준 = 1 if 교육수준1 == 6 & inlist(교육수준2, 4, 5)
+* 전문대 재학, 휴학, 비해당 → 고졸 이하
+replace 교육수준 = 0 if 교육수준1 == 6 & inlist(교육수준2, 1,2,3)
+* 대학교 졸업 또는 수료
+replace 교육수준 = 2 if 교육수준1 == 7 & inlist(교육수준2, 4, 5)
+* 대학교 재학, 휴학, 비해당 → 전문대졸로 간주
+replace 교육수준 = 1 if 교육수준1 == 7 & inlist(교육수준2, 1,2,3)
+* 대학원(석사/박사) 졸업 또는 수료
+replace 교육수준 = 3 if inlist(교육수준1, 8,9) & inlist(교육수준2, 4, 5)
+* 대학원 재학, 휴학, 비해당 → 대졸로 간주
+replace 교육수준 = 2 if inlist(교육수준1, 8,9) & inlist(교육수준2, 1,2,3)
+tab 교육수준, m
+
+* 사업체규모
+tab 사업장규모, m
+recode 사업장규모 (1/7=0) (8/10=1) (11=.), gen (사업체규모)
+tab 사업체규모, m
+* 결측치: 11
+
+* 로그가처분소득
+tab 가처분소득, m
+gen 로그가처분소득 = ln(가처분소득)
+sort 가처분소득
+tab 로그가처분소득, m
+** 음(-)의 값은 결측치로, 단위 확인필요
+
+* 업종
+tab 업종, m
+recode 업종 (999=.) (1/3=1) (5/34=2) (35/39=3) (41/42=4) (45/69=5) (70/96=6) (97/99=7), gen(업종_더미) 
+tab 업종_더미
+tab 업종_더미,m
+* 결측치: 999
+
+* 직종
+tab 직종 , m
+recode 직종 (9999=.) (100/199=1) (200/399=2) (400/499=3) (500/699=4) (700/899=5) (900/999=6) (1000/1999=7), gen(직종_더미)
+tab 직종_더미
+tab 직종_더미,m
+* 결측치: 9999
+
+* 지역
+tab 지역, m
+
+* year 
+gen year = 2016, 2017, 2018, 2019, 2020
+gen period = 0  // 2016=0, 2017=1, 2018=2, 2019=3, 2020=4로 코딩
+gen covid = 0  // 2016~2019년에는 0으로 코딩, 2020년에는 1로 코딩
+
+
+**# 그외 변수정리 #2
+
+
+
+
+**# 처치집단 VS 비교집단 #3
+
+* 동성모형 _ 미취학 자녀가 있는 기혼 여성 (처치집단) VS 미취학 자녀가 없는 기혼 여성 (비교집단) 
+** 가계도 - 아버지, 어머니, 아이들로 구성됨
+** 처치집단에는 가구에 미취학 자녀(6세 이하)가 있는 집단
+** 비교집단에는 가구에 미취학 자녀가 없고 7세 이상 18세 이하의 자녀가 있는 집단
+
+keep if nuclear_family == 1
+keep if 연령 >= 25 & 연령 <= 54 
+keep if 자녀유무==1
+keep if 혼인상태==1
+keep if 가구형태==5
+keep if 가구주와관계==10 | 가구주와관계==20
