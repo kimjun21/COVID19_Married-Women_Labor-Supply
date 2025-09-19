@@ -31,7 +31,7 @@ foreach y in 2016 2017 2018 2019 2020 2021 {
         keep if overlap_flag != 1
     }
 
-	* trimming: 데이터의 실제 분포에 맞춰 자동으로 1~99 분위수 구간을 잡음.
+	* trimming: 데이터의 실제 분포에 맞춰 자동으로 1~99 분위수 구간을 잡음
     quietly _pctile pscore_`y', p(1 99)
     local lb = r(r1)
     local ub = r(r2)
@@ -73,3 +73,4 @@ foreach y in 2016 2017 2018 2019 2020 2021 {
 foreach y in 2016 2017 2018 2019 2020 2021 {
     replace ipw = ipw_`y' if year == `y'
 }
+
