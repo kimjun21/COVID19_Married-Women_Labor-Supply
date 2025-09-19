@@ -1,4 +1,4 @@
-**# year-specific inverse probability weights #**
+**# Year-Specific Inverse Probability Weights #**
 
 gen ipw = .
 
@@ -73,4 +73,5 @@ foreach y in 2016 2017 2018 2019 2020 2021 {
 foreach y in 2016 2017 2018 2019 2020 2021 {
     replace ipw = ipw_`y' if year == `y'
 }
+
 
