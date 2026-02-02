@@ -3,4 +3,4 @@
 2) Year-Specific Inverse Probability Weighting
 3) Year-Specific IPW & Event-Study Difference-in-Differences Estimation
 4) Placebo Test
-+ New (통제변수 수정)
+++ New (통제변수 수정)
