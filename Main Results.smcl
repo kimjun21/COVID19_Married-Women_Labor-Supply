@@ -1,0 +1,671 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}C:\Users\rag95\OneDrive\바탕 화면\Main Results.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}22 Feb 2026, 23:31:43
+
+{com}. do "C:\Users\rag95\AppData\Local\Temp\STDd28_000000.tmp"
+{txt}
+{com}. **# Year-Specific Inverse Probability Weighting #**
+. 
+. gen ipw = .
+{txt}(4,174 missing values generated)
+
+{com}. 
+. foreach y in 2016 2017 2018 2019 2020 2021 {c -(}
+{txt}  2{com}. 
+.     preserve
+{txt}  3{com}.     display "==== `y'년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ===="
+{txt}  4{com}.     keep if year == `y'
+{txt}  5{com}. 
+.     * 연도별로 공변량에 대한 성향점수를 로짓으로 추정함
+.     logit 자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 ///
+>           지역_더미1 지역_더미2 지역_더미3 지역_더미4 지역_더미5 지역_더미6 지역_더미7
+{txt}  6{com}. 
+.     predict pscore_`y', pr
+{txt}  7{com}. 
+.     * teffects ipw: 성향점수를 기반으로 IPW 추정을 실행 → 처치 효과 (기본값: ATE) 추정
+.         * osample(overlap_flag): overlap 조건을 확인하고, 문제가 있는 표본을 자동으로 표시 → 추정이 신뢰할 수 있도록
+.         * capture noisily: 메크로에서 특정 표본 문제(공통지지 위반, 결측 등)로 에러가 나도 명령문 실행이 멈추지 않게
+.     capture noisily teffects ipw (종속변수) ///
+>         (자녀연령 = 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 ///
+>          지역_더미1 지역_더미2 지역_더미3 지역_더미4 지역_더미5 지역_더미6 지역_더미7), osample(overlap_flag)
+{txt}  8{com}. 
+.     * overlap 조건 확인 & overlap 조건 위반 제거
+.     capture confirm variable overlap_flag
+{txt}  9{com}.     if !_rc {c -(}
+{txt} 10{com}.         keep if overlap_flag != 1
+{txt} 11{com}.     {c )-}
+{txt} 12{com}. 
+.         * trimming: 데이터의 실제 성향점수 분포에 맞춰 자동으로 1~99 분위수 구간을 잡음
+.     quietly _pctile pscore_`y', p(1 99)
+{txt} 13{com}.     local lb = r(r1)
+{txt} 14{com}.     local ub = r(r2)
+{txt} 15{com}. 
+.     display ">> Trimming 범위 (`y'): `lb' ~ `ub'"
+{txt} 16{com}. 
+.     * trimming을 연도별로 적용
+.     keep if pscore_`y' > `lb' & pscore_`y' < `ub'
+{txt} 17{com}. 
+.     * 전체 표본에서 자녀연령(=1)의 비율 계산
+.     quietly sum 자녀연령
+{txt} 18{com}.     local pt = r(mean)          // 미취학 자녀가 있는 기혼 여성 비율
+{txt} 19{com}.     local pc = 1 - `pt'         // 미취학 자녀가 없는 기혼 여성 비율
+{txt} 20{com}. 
+.     * 안정화된 ipw를 연도별로 계산
+.         * 안정화된 ipw: 일반 ipw(처치를 받을 수 있는 사람들 중에서 실제로 처치를 받은 사람들의 역수)에 전체 표본 중 처치를 받은 사람의 비율을 곱함
+.         * Tip! 일반 ipw는 극단적인 성향점수가 있으면 가중치가 엄청 커져서 분산이 커지는 단점이 있음! 이를 안정화된 ipw는 조정할 수 있음!
+.     gen ipw_`y' = .
+{txt} 21{com}.     replace ipw_`y' = `pt' / pscore_`y' if 자녀연령 == 1
+{txt} 22{com}.     replace ipw_`y' = `pc' / (1 - pscore_`y') if 자녀연령 == 0
+{txt} 23{com}. 
+.     * 성향점수 & 가중치 연도별로 저장
+.     keep 개인id year ipw_`y' pscore_`y'
+{txt} 24{com}.     tempfile ipwfile_`y'
+{txt} 25{com}.     save `ipwfile_`y''
+{txt} 26{com}.     restore
+{txt} 27{com}. {c )-}
+==== 2016년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+{txt}(3,298 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-490.87261}  
+Iteration 1:{space 2}Log likelihood = {res:-284.53093}  
+Iteration 2:{space 2}Log likelihood = {res:-267.13829}  
+Iteration 3:{space 2}Log likelihood = {res:-265.68243}  
+Iteration 4:{space 2}Log likelihood = {res:-265.67057}  
+Iteration 5:{space 2}Log likelihood = {res:-265.67057}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:870}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:450.40}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-265.67057}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.4588}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} .7167881{col 29}{space 2} .5114954{col 40}{space 1}    1.40{col 49}{space 3}0.161{col 57}{space 4}-.2857246{col 70}{space 3} 1.719301
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2}-.0132345{col 29}{space 2} .0063849{col 40}{space 1}   -2.07{col 49}{space 3}0.038{col 57}{space 4}-.0257487{col 70}{space 3}-.0007203
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2}  .397129{col 29}{space 2} .1286834{col 40}{space 1}    3.09{col 49}{space 3}0.002{col 57}{space 4} .1449141{col 70}{space 3} .6493439
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} .2034916{col 29}{space 2} .2648566{col 40}{space 1}    0.77{col 49}{space 3}0.442{col 57}{space 4}-.3156178{col 70}{space 3}  .722601
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-1.718826{col 29}{space 2} .1790521{col 40}{space 1}   -9.60{col 49}{space 3}0.000{col 57}{space 4}-2.069762{col 70}{space 3} -1.36789
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2}-.2738516{col 29}{space 2}   .42397{col 40}{space 1}   -0.65{col 49}{space 3}0.518{col 57}{space 4}-1.104817{col 70}{space 3} .5571143
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2} .3431075{col 29}{space 2} .3558468{col 40}{space 1}    0.96{col 49}{space 3}0.335{col 57}{space 4}-.3543394{col 70}{space 3} 1.040554
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2} .1554123{col 29}{space 2} .4131902{col 40}{space 1}    0.38{col 49}{space 3}0.707{col 57}{space 4}-.6544256{col 70}{space 3} .9652502
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2} .0429666{col 29}{space 2} .4564489{col 40}{space 1}    0.09{col 49}{space 3}0.925{col 57}{space 4}-.8516568{col 70}{space 3}   .93759
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2} .0179232{col 29}{space 2} .4370059{col 40}{space 1}    0.04{col 49}{space 3}0.967{col 57}{space 4}-.8385926{col 70}{space 3}  .874439
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2} .1994184{col 29}{space 2} .5186649{col 40}{space 1}    0.38{col 49}{space 3}0.701{col 57}{space 4}-.8171462{col 70}{space 3} 1.215983
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2}-7.951488{col 29}{space 2} 10.34185{col 40}{space 1}   -0.77{col 49}{space 3}0.442{col 57}{space 4}-28.22115{col 70}{space 3} 12.31817
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+(6 missing values generated)
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2016): .0005808611749671 ~ .9791103005409241
+(23 observations deleted)
+(853 missing values generated)
+(210 real changes made)
+(643 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_000002.tmp{rm}
+saved
+as .dta format
+{p_end}
+==== 2017년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+(3,381 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-419.02396}  
+Iteration 1:{space 2}Log likelihood = {res:-259.64131}  
+Iteration 2:{space 2}Log likelihood = {res:-241.89466}  
+Iteration 3:{space 2}Log likelihood = {res:-240.51492}  
+Iteration 4:{space 2}Log likelihood = {res:-240.50355}  
+Iteration 5:{space 2}Log likelihood = {res:-240.50355}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:790}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:357.04}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-240.50355}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.4260}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} .7262915{col 29}{space 2} .5235678{col 40}{space 1}    1.39{col 49}{space 3}0.165{col 57}{space 4}-.2998825{col 70}{space 3} 1.752466
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2}-.0133099{col 29}{space 2}  .006506{col 40}{space 1}   -2.05{col 49}{space 3}0.041{col 57}{space 4}-.0260616{col 70}{space 3}-.0005583
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .4212861{col 29}{space 2} .1342832{col 40}{space 1}    3.14{col 49}{space 3}0.002{col 57}{space 4} .1580958{col 70}{space 3} .6844763
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} .3292086{col 29}{space 2} .3008246{col 40}{space 1}    1.09{col 49}{space 3}0.274{col 57}{space 4}-.2603968{col 70}{space 3} .9188139
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-1.572331{col 29}{space 2} .1943632{col 40}{space 1}   -8.09{col 49}{space 3}0.000{col 57}{space 4}-1.953276{col 70}{space 3}-1.191387
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2}-.6250232{col 29}{space 2} .4698653{col 40}{space 1}   -1.33{col 49}{space 3}0.183{col 57}{space 4}-1.545942{col 70}{space 3} .2958957
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2} .3206068{col 29}{space 2} .3657201{col 40}{space 1}    0.88{col 49}{space 3}0.381{col 57}{space 4}-.3961914{col 70}{space 3} 1.037405
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2} .0719908{col 29}{space 2} .4270725{col 40}{space 1}    0.17{col 49}{space 3}0.866{col 57}{space 4}-.7650559{col 70}{space 3} .9090376
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2}-.2068186{col 29}{space 2}  .468642{col 40}{space 1}   -0.44{col 49}{space 3}0.659{col 57}{space 4} -1.12534{col 70}{space 3} .7117028
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2}-.1527262{col 29}{space 2} .4661235{col 40}{space 1}   -0.33{col 49}{space 3}0.743{col 57}{space 4}-1.066311{col 70}{space 3}  .760859
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2} .1810167{col 29}{space 2} .5375654{col 40}{space 1}    0.34{col 49}{space 3}0.736{col 57}{space 4}-.8725921{col 70}{space 3} 1.234626
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2}-9.475964{col 29}{space 2} 10.65217{col 40}{space 1}   -0.89{col 49}{space 3}0.374{col 57}{space 4}-30.35383{col 70}{space 3}  11.4019
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+(3 missing values generated)
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2017): .0004152664332651 ~ .9693913459777832
+(19 observations deleted)
+(774 missing values generated)
+(168 real changes made)
+(606 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_000004.tmp{rm}
+saved
+as .dta format
+{p_end}
+==== 2018년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+(3,465 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-343.28063}  
+Iteration 1:{space 2}Log likelihood = {res:-212.88311}  
+Iteration 2:{space 2}Log likelihood = {res:-193.17064}  
+Iteration 3:{space 2}Log likelihood = {res:-189.99762}  
+Iteration 4:{space 2}Log likelihood = {res:-189.96163}  
+Iteration 5:{space 2}Log likelihood = {res:-189.96159}  
+Iteration 6:{space 2}Log likelihood = {res:-189.96159}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:707}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:306.64}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-189.96159}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.4466}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} 1.024895{col 29}{space 2} .4453378{col 40}{space 1}    2.30{col 49}{space 3}0.021{col 57}{space 4}  .152049{col 70}{space 3} 1.897741
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2}-.0171056{col 29}{space 2} .0056159{col 40}{space 1}   -3.05{col 49}{space 3}0.002{col 57}{space 4}-.0281125{col 70}{space 3}-.0060987
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .3890335{col 29}{space 2} .1554507{col 40}{space 1}    2.50{col 49}{space 3}0.012{col 57}{space 4} .0843556{col 70}{space 3} .6937113
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2}-.3152191{col 29}{space 2} .2997329{col 40}{space 1}   -1.05{col 49}{space 3}0.293{col 57}{space 4}-.9026848{col 70}{space 3} .2722466
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-1.827852{col 29}{space 2} .2312808{col 40}{space 1}   -7.90{col 49}{space 3}0.000{col 57}{space 4}-2.281154{col 70}{space 3} -1.37455
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2}-.2414449{col 29}{space 2} .5285339{col 40}{space 1}   -0.46{col 49}{space 3}0.648{col 57}{space 4}-1.277352{col 70}{space 3} .7944625
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2} .3965722{col 29}{space 2} .4224214{col 40}{space 1}    0.94{col 49}{space 3}0.348{col 57}{space 4}-.4313586{col 70}{space 3} 1.224503
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2} .1613894{col 29}{space 2} .4849519{col 40}{space 1}    0.33{col 49}{space 3}0.739{col 57}{space 4}-.7890988{col 70}{space 3} 1.111878
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2}-.5494698{col 29}{space 2} .5335451{col 40}{space 1}   -1.03{col 49}{space 3}0.303{col 57}{space 4}-1.595199{col 70}{space 3} .4962594
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2}-.0647617{col 29}{space 2} .5453658{col 40}{space 1}   -0.12{col 49}{space 3}0.905{col 57}{space 4}-1.133659{col 70}{space 3} 1.004135
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2}  .526575{col 29}{space 2} .5901227{col 40}{space 1}    0.89{col 49}{space 3}0.372{col 57}{space 4}-.6300442{col 70}{space 3} 1.683194
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2}-9.413445{col 29}{space 2} 9.087289{col 40}{space 1}   -1.04{col 49}{space 3}0.300{col 57}{space 4} -27.2242{col 70}{space 3} 8.397314
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+(2 missing values generated)
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2018): .000198705951334 ~ .975214958190918
+(18 observations deleted)
+(691 missing values generated)
+(126 real changes made)
+(565 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_000006.tmp{rm}
+saved
+as .dta format
+{p_end}
+==== 2019년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+(3,583 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-263.85376}  
+Iteration 1:{space 2}Log likelihood = {res:-169.67525}  
+Iteration 2:{space 2}Log likelihood = {res:-155.42732}  
+Iteration 3:{space 2}Log likelihood = {res:-153.87808}  
+Iteration 4:{space 2}Log likelihood = {res:-153.87155}  
+Iteration 5:{space 2}Log likelihood = {res:-153.87155}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:591}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:219.96}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-153.87155}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.4168}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} .4349951{col 29}{space 2} .5243208{col 40}{space 1}    0.83{col 49}{space 3}0.407{col 57}{space 4}-.5926547{col 70}{space 3} 1.462645
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2}-.0099633{col 29}{space 2} .0065207{col 40}{space 1}   -1.53{col 49}{space 3}0.127{col 57}{space 4}-.0227436{col 70}{space 3} .0028171
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .4777338{col 29}{space 2} .1783458{col 40}{space 1}    2.68{col 49}{space 3}0.007{col 57}{space 4} .1281824{col 70}{space 3} .8272852
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2}-.2862584{col 29}{space 2} .4426208{col 40}{space 1}   -0.65{col 49}{space 3}0.518{col 57}{space 4}-1.153779{col 70}{space 3} .5812624
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-1.498121{col 29}{space 2} .2585257{col 40}{space 1}   -5.79{col 49}{space 3}0.000{col 57}{space 4}-2.004822{col 70}{space 3}-.9914197
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2}-.3216099{col 29}{space 2} .5825422{col 40}{space 1}   -0.55{col 49}{space 3}0.581{col 57}{space 4}-1.463372{col 70}{space 3} .8201518
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2} .0427781{col 29}{space 2} .4655461{col 40}{space 1}    0.09{col 49}{space 3}0.927{col 57}{space 4}-.8696754{col 70}{space 3} .9552316
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2}  .226688{col 29}{space 2} .5182308{col 40}{space 1}    0.44{col 49}{space 3}0.662{col 57}{space 4}-.7890257{col 70}{space 3} 1.242402
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2}-.5384424{col 29}{space 2} .5803143{col 40}{space 1}   -0.93{col 49}{space 3}0.353{col 57}{space 4}-1.675838{col 70}{space 3} .5989528
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2}-.2702061{col 29}{space 2} .5710559{col 40}{space 1}   -0.47{col 49}{space 3}0.636{col 57}{space 4}-1.389455{col 70}{space 3} .8490428
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2}-.7050241{col 29}{space 2} .8366244{col 40}{space 1}   -0.84{col 49}{space 3}0.399{col 57}{space 4}-2.344778{col 70}{space 3} .9347295
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2} 2.031207{col 29}{space 2} 11.19916{col 40}{space 1}    0.18{col 49}{space 3}0.856{col 57}{space 4}-19.91874{col 70}{space 3} 23.98115
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2019): .000238594118855 ~ .9719005227088928
+(12 observations deleted)
+(579 missing values generated)
+(91 real changes made)
+(488 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_000008.tmp{rm}
+saved
+as .dta format
+{p_end}
+==== 2020년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+(3,625 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-222.57895}  
+Iteration 1:{space 2}Log likelihood = {res:-162.59831}  
+Iteration 2:{space 2}Log likelihood = {res:-151.73627}  
+Iteration 3:{space 2}Log likelihood = {res:-147.79651}  
+Iteration 4:{space 2}Log likelihood = {res:-147.76414}  
+Iteration 5:{space 2}Log likelihood = {res:-147.76412}  
+Iteration 6:{space 2}Log likelihood = {res:-147.76412}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:549}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:149.63}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-147.76412}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.3361}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} .7452814{col 29}{space 2} .4838244{col 40}{space 1}    1.54{col 49}{space 3}0.123{col 57}{space 4}-.2029971{col 70}{space 3}  1.69356
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2} -.013084{col 29}{space 2} .0060119{col 40}{space 1}   -2.18{col 49}{space 3}0.030{col 57}{space 4}-.0248671{col 70}{space 3}-.0013008
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .2221924{col 29}{space 2} .1786818{col 40}{space 1}    1.24{col 49}{space 3}0.214{col 57}{space 4}-.1280176{col 70}{space 3} .5724023
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} .1908205{col 29}{space 2} .3652027{col 40}{space 1}    0.52{col 49}{space 3}0.601{col 57}{space 4}-.5249636{col 70}{space 3} .9066045
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-1.204987{col 29}{space 2} .2523615{col 40}{space 1}   -4.77{col 49}{space 3}0.000{col 57}{space 4}-1.699607{col 70}{space 3} -.710368
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2} .1031051{col 29}{space 2} .6470582{col 40}{space 1}    0.16{col 49}{space 3}0.873{col 57}{space 4}-1.165106{col 70}{space 3} 1.371316
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2} .4452772{col 29}{space 2} .4984878{col 40}{space 1}    0.89{col 49}{space 3}0.372{col 57}{space 4} -.531741{col 70}{space 3} 1.422295
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2} .7341023{col 29}{space 2} .5587433{col 40}{space 1}    1.31{col 49}{space 3}0.189{col 57}{space 4}-.3610144{col 70}{space 3} 1.829219
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2} .3055536{col 29}{space 2} .6000307{col 40}{space 1}    0.51{col 49}{space 3}0.611{col 57}{space 4}-.8704849{col 70}{space 3} 1.481592
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2} .5826826{col 29}{space 2} .5806556{col 40}{space 1}    1.00{col 49}{space 3}0.316{col 57}{space 4}-.5553815{col 70}{space 3} 1.720747
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2} -.452741{col 29}{space 2} .8364596{col 40}{space 1}   -0.54{col 49}{space 3}0.588{col 57}{space 4}-2.092172{col 70}{space 3}  1.18669
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2}-10.18717{col 29}{space 2} 9.816601{col 40}{space 1}   -1.04{col 49}{space 3}0.299{col 57}{space 4}-29.42735{col 70}{space 3} 9.053018
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2020): .0004152458277531 ~ .9225426912307739
+(12 observations deleted)
+(537 missing values generated)
+(71 real changes made)
+(466 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_00000a.tmp{rm}
+saved
+as .dta format
+{p_end}
+==== 2021년 성향점수, overlap 확인 및 Stabilized IPW 추정 중 ====
+(3,518 observations deleted)
+
+note: {bf:지역_더미7} omitted because of collinearity.
+{res}{txt}Iteration 0:{space 2}Log likelihood = {res:-366.39445}  
+Iteration 1:{space 2}Log likelihood = {res:-184.66156}  
+Iteration 2:{space 2}Log likelihood = {res:-167.31396}  
+Iteration 3:{space 2}Log likelihood = {res:-165.44399}  
+Iteration 4:{space 2}Log likelihood = {res:-165.43784}  
+Iteration 5:{space 2}Log likelihood = {res:-165.43784}  
+{res}
+{txt}{col 1}Logistic regression{col 57}{lalign 13:Number of obs}{col 70} = {res}{ralign 6:655}
+{txt}{col 57}{lalign 13:LR chi2({res:11})}{col 70} = {res}{ralign 6:401.91}
+{txt}{col 57}{lalign 13:Prob > chi2}{col 70} = {res}{ralign 6:0.0000}
+{txt}{col 1}{lalign 14:Log likelihood}{col 15} = {res}{ralign 10:-165.43784}{txt}{col 57}{lalign 13:Pseudo R2}{col 70} = {res}{ralign 6:0.5485}
+
+{txt}{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}       자녀연령{col 17}{c |} Coefficient{col 29}  Std. err.{col 41}      z{col 49}   P>|z|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}연령 {c |}{col 17}{res}{space 2} .8927874{col 29}{space 2} .3902719{col 40}{space 1}    2.29{col 49}{space 3}0.022{col 57}{space 4} .1278684{col 70}{space 3} 1.657706
+{txt}{space 7}연령제곱 {c |}{col 17}{res}{space 2}-.0144702{col 29}{space 2} .0048475{col 40}{space 1}   -2.99{col 49}{space 3}0.003{col 57}{space 4}-.0239712{col 70}{space 3}-.0049692
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .3643757{col 29}{space 2} .1681382{col 40}{space 1}    2.17{col 49}{space 3}0.030{col 57}{space 4}  .034831{col 70}{space 3} .6939204
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2}-.0754593{col 29}{space 2} .3835446{col 40}{space 1}   -0.20{col 49}{space 3}0.844{col 57}{space 4} -.827193{col 70}{space 3} .6762743
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2}-2.258539{col 29}{space 2} .2522859{col 40}{space 1}   -8.95{col 49}{space 3}0.000{col 57}{space 4} -2.75301{col 70}{space 3}-1.764067
+{txt}{space 5}지역_더미1 {c |}{col 17}{res}{space 2}-.3618953{col 29}{space 2} .6286915{col 40}{space 1}   -0.58{col 49}{space 3}0.565{col 57}{space 4}-1.594108{col 70}{space 3} .8703174
+{txt}{space 5}지역_더미2 {c |}{col 17}{res}{space 2}  .045566{col 29}{space 2} .4562285{col 40}{space 1}    0.10{col 49}{space 3}0.920{col 57}{space 4}-.8486254{col 70}{space 3} .9397575
+{txt}{space 5}지역_더미3 {c |}{col 17}{res}{space 2} .7380509{col 29}{space 2} .4806537{col 40}{space 1}    1.54{col 49}{space 3}0.125{col 57}{space 4}-.2040131{col 70}{space 3} 1.680115
+{txt}{space 5}지역_더미4 {c |}{col 17}{res}{space 2}  .149602{col 29}{space 2} .5533577{col 40}{space 1}    0.27{col 49}{space 3}0.787{col 57}{space 4}-.9349593{col 70}{space 3} 1.234163
+{txt}{space 5}지역_더미5 {c |}{col 17}{res}{space 2} .6533483{col 29}{space 2} .5133713{col 40}{space 1}    1.27{col 49}{space 3}0.203{col 57}{space 4}-.3528409{col 70}{space 3} 1.659538
+{txt}{space 5}지역_더미6 {c |}{col 17}{res}{space 2}-.5055207{col 29}{space 2} .7350381{col 40}{space 1}   -0.69{col 49}{space 3}0.492{col 57}{space 4}-1.946169{col 70}{space 3} .9351275
+{txt}{space 5}지역_더미7 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 10}_cons {c |}{col 17}{res}{space 2}-9.962442{col 29}{space 2} 8.369349{col 40}{space 1}   -1.19{col 49}{space 3}0.234{col 57}{space 4}-26.36606{col 70}{space 3}  6.44118
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+(1 missing value generated)
+{err}=exp not allowed
+{txt}{phang}The treatment-model is misspecified.{p_end}
+{phang}An outline of the syntax is{p_end}
+{phang}{helpb teffects ipw} {bf:(}{it:outcome_variable}{bf:)} {bf:(}{it:treatment_variable varlist}{bf:)} {p_end}
+>> Trimming 범위 (2021): .0004571180325001 ~ .9888145327568054
+(14 observations deleted)
+(642 missing values generated)
+(155 real changes made)
+(487 real changes made)
+{p 0 4 2}
+file {bf}
+C:\Users\rag95\AppData\Local\Temp\ST_d28_00000c.tmp{rm}
+saved
+as .dta format
+{p_end}
+
+{com}. 
+. * -----------------------
+. * 연도별로 병합 (pscore, ipw 함께)
+. * -----------------------
+. foreach y in 2016 2017 2018 2019 2020 2021 {c -(}
+{txt}  2{com}.     merge 1:1 개인id year using `ipwfile_`y'', nogen
+{txt}  3{com}. {c )-}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,321
+{txt}{col 9}from master{col 30}{res}           3,321{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             853{txt}  
+{col 5}{hline 41}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,400
+{txt}{col 9}from master{col 30}{res}           3,400{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             774{txt}  
+{col 5}{hline 41}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,483
+{txt}{col 9}from master{col 30}{res}           3,483{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             691{txt}  
+{col 5}{hline 41}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,595
+{txt}{col 9}from master{col 30}{res}           3,595{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             579{txt}  
+{col 5}{hline 41}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,637
+{txt}{col 9}from master{col 30}{res}           3,637{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             537{txt}  
+{col 5}{hline 41}
+{res}
+{txt}{col 5}Result{col 33}Number of obs
+{col 5}{hline 41}
+{col 5}Not matched{col 30}{res}           3,532
+{txt}{col 9}from master{col 30}{res}           3,532{txt}  
+{col 9}from using{col 30}{res}               0{txt}  
+
+{col 5}Matched{col 30}{res}             642{txt}  
+{col 5}{hline 41}
+
+{com}. 
+. * -----------------------
+. * 최종 ipw 생성 완료
+. * -----------------------
+. foreach y in 2016 2017 2018 2019 2020 2021 {c -(}
+{txt}  2{com}.     replace ipw = ipw_`y' if year == `y'
+{txt}  3{com}. {c )-}
+{txt}(853 real changes made)
+(774 real changes made)
+(691 real changes made)
+(579 real changes made)
+(537 real changes made)
+(642 real changes made)
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "C:\Users\rag95\AppData\Local\Temp\STDd28_000001.tmp"
+{txt}
+{com}. **# Year-Specific IPW & Event-Study Difference-in-Differences Estimation #**
+. reghdfe 종속변수 ib2019.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 지역) vce(cluster 개인id)
+{res}{txt}(dropped 248 {browse "http://scorreia.com/research/singletons.pdf":singleton observations})
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 9 iterations)
+{res}{txt}note: {res}연령{txt} omitted because of collinearity
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     2,199
+{txt}Absorbing 2 HDFE groups{col 51}F({res}  15{txt},{res}    547{txt}){col 67}= {res}      6.11
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.8835
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.8430
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.2744
+{txt}{col 1}Number of clusters ({res}개인id{txt}) {col 30}= {res}       548{txt}{col 51}Root MSE{col 67}= {res}    7.2756
+
+{txt}{ralign 81:(Std. err. adjusted for {res:548} clusters in {res:개인id})}
+{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 17}{c |}{col 29}    Robust
+{col 1}       종속변수{col 17}{c |} Coefficient{col 29}  std. err.{col 41}      t{col 49}   P>|t|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}year {c |}
+{space 10}2016  {c |}{col 17}{res}{space 2} 8.161221{col 29}{space 2} 6.982772{col 40}{space 1}    1.17{col 49}{space 3}0.243{col 57}{space 4} -5.55511{col 70}{space 3} 21.87755
+{txt}{space 10}2017  {c |}{col 17}{res}{space 2} 4.651745{col 29}{space 2} 4.614855{col 40}{space 1}    1.01{col 49}{space 3}0.314{col 57}{space 4}-4.413262{col 70}{space 3} 13.71675
+{txt}{space 10}2018  {c |}{col 17}{res}{space 2} 2.061744{col 29}{space 2} 2.378107{col 40}{space 1}    0.87{col 49}{space 3}0.386{col 57}{space 4}-2.609596{col 70}{space 3} 6.733083
+{txt}{space 10}2020  {c |}{col 17}{res}{space 2} -2.96911{col 29}{space 2} 2.437802{col 40}{space 1}   -1.22{col 49}{space 3}0.224{col 57}{space 4}-7.757709{col 70}{space 3} 1.819489
+{txt}{space 10}2021  {c |}{col 17}{res}{space 2}-4.789096{col 29}{space 2} 4.763419{col 40}{space 1}   -1.01{col 49}{space 3}0.315{col 57}{space 4}-14.14593{col 70}{space 3} 4.567736
+{txt}{space 15} {c |}
+{space 5}1.자녀연령 {c |}{col 17}{res}{space 2} 2.539135{col 29}{space 2} 3.428251{col 40}{space 1}    0.74{col 49}{space 3}0.459{col 57}{space 4}-4.195014{col 70}{space 3} 9.273283
+{txt}{space 15} {c |}
+{space 2}year#자녀연령 {c |}
+{space 8}2016 1  {c |}{col 17}{res}{space 2}-3.757572{col 29}{space 2} 3.417776{col 40}{space 1}   -1.10{col 49}{space 3}0.272{col 57}{space 4}-10.47115{col 70}{space 3} 2.956002
+{txt}{space 8}2017 1  {c |}{col 17}{res}{space 2}-5.195438{col 29}{space 2} 4.111189{col 40}{space 1}   -1.26{col 49}{space 3}0.207{col 57}{space 4}-13.27109{col 70}{space 3} 2.880213
+{txt}{space 8}2018 1  {c |}{col 17}{res}{space 2} .5101818{col 29}{space 2} 1.660347{col 40}{space 1}    0.31{col 49}{space 3}0.759{col 57}{space 4}-2.751255{col 70}{space 3} 3.771618
+{txt}{space 8}2020 1  {c |}{col 17}{res}{space 2}-11.13882{col 29}{space 2} 3.368804{col 40}{space 1}   -3.31{col 49}{space 3}0.001{col 57}{space 4} -17.7562{col 70}{space 3}-4.521442
+{txt}{space 8}2021 1  {c |}{col 17}{res}{space 2} 9.457474{col 29}{space 2} 3.611465{col 40}{space 1}    2.62{col 49}{space 3}0.009{col 57}{space 4} 2.363436{col 70}{space 3} 16.55151
+{txt}{space 15} {c |}
+{space 11}연령 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 7}연령제곱 {c |}{col 17}{res}{space 2}  .027712{col 29}{space 2} .0259491{col 40}{space 1}    1.07{col 49}{space 3}0.286{col 57}{space 4}  -.02326{col 70}{space 3} .0786841
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .1561447{col 29}{space 2} 2.295688{col 40}{space 1}    0.07{col 49}{space 3}0.946{col 57}{space 4}-4.353299{col 70}{space 3} 4.665588
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} 6.682284{col 29}{space 2} 2.470767{col 40}{space 1}    2.70{col 49}{space 3}0.007{col 57}{space 4}  1.82893{col 70}{space 3} 11.53564
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2} .3393334{col 29}{space 2} .9706776{col 40}{space 1}    0.35{col 49}{space 3}0.727{col 57}{space 4}-1.567379{col 70}{space 3} 2.246045
+{txt}{space 10}_cons {c |}{col 17}{res}{space 2}-76.89875{col 29}{space 2} 62.08912{col 40}{space 1}   -1.24{col 49}{space 3}0.216{col 57}{space 4}-198.8611{col 70}{space 3} 45.06355
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}      개인id{col 14}{c |}{space 1}      548{col 27}{space 1}      548{col 39}{result}{space 1}        0{col 53}{text}*{col 54}{c |}
+{res}{col 1}{text}        지역{col 14}{c |}{space 1}        7{col 27}{space 1}        1{col 39}{result}{space 1}        6{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+* = FE nested within cluster; treated as redundant for DoF computation
+{res}{txt}
+{com}. 
+{txt}end of do-file
+
+{com}. do "C:\Users\rag95\AppData\Local\Temp\STDd28_000002.tmp"
+{txt}
+{com}. **# Placebo Test #**
+. ** 1번. 가짜 기준연도 2018, Placebo Test -> 2019년도 × 자녀연령의 상호작용항의 계수가 통계적으로 유의미하지 않아야 함!
+. reghdfe 종속변수 ib2018.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 지역) vce(cluster 개인id)
+{res}{txt}(dropped 248 {browse "http://scorreia.com/research/singletons.pdf":singleton observations})
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 9 iterations)
+{res}{txt}note: {res}연령{txt} omitted because of collinearity
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     2,199
+{txt}Absorbing 2 HDFE groups{col 51}F({res}  15{txt},{res}    547{txt}){col 67}= {res}      6.11
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.8835
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.8430
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.2744
+{txt}{col 1}Number of clusters ({res}개인id{txt}) {col 30}= {res}       548{txt}{col 51}Root MSE{col 67}= {res}    7.2756
+
+{txt}{ralign 81:(Std. err. adjusted for {res:548} clusters in {res:개인id})}
+{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 17}{c |}{col 29}    Robust
+{col 1}       종속변수{col 17}{c |} Coefficient{col 29}  std. err.{col 41}      t{col 49}   P>|t|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}year {c |}
+{space 10}2016  {c |}{col 17}{res}{space 2} 6.099478{col 29}{space 2} 4.706599{col 40}{space 1}    1.30{col 49}{space 3}0.196{col 57}{space 4}-3.145743{col 70}{space 3}  15.3447
+{txt}{space 10}2017  {c |}{col 17}{res}{space 2} 2.590002{col 29}{space 2} 2.353278{col 40}{space 1}    1.10{col 49}{space 3}0.272{col 57}{space 4}-2.032567{col 70}{space 3}  7.21257
+{txt}{space 10}2019  {c |}{col 17}{res}{space 2}-2.061744{col 29}{space 2} 2.378107{col 40}{space 1}   -0.87{col 49}{space 3}0.386{col 57}{space 4}-6.733083{col 70}{space 3} 2.609596
+{txt}{space 10}2020  {c |}{col 17}{res}{space 2}-5.030854{col 29}{space 2} 4.682651{col 40}{space 1}   -1.07{col 49}{space 3}0.283{col 57}{space 4}-14.22903{col 70}{space 3} 4.167326
+{txt}{space 10}2021  {c |}{col 17}{res}{space 2} -6.85084{col 29}{space 2} 7.032107{col 40}{space 1}   -0.97{col 49}{space 3}0.330{col 57}{space 4}-20.66408{col 70}{space 3}   6.9624
+{txt}{space 15} {c |}
+{space 5}1.자녀연령 {c |}{col 17}{res}{space 2} 3.049316{col 29}{space 2} 3.304055{col 40}{space 1}    0.92{col 49}{space 3}0.356{col 57}{space 4}-3.440872{col 70}{space 3} 9.539505
+{txt}{space 15} {c |}
+{space 2}year#자녀연령 {c |}
+{space 8}2016 1  {c |}{col 17}{res}{space 2}-4.267753{col 29}{space 2} 3.208276{col 40}{space 1}   -1.33{col 49}{space 3}0.184{col 57}{space 4} -10.5698{col 70}{space 3} 2.034296
+{txt}{space 8}2017 1  {c |}{col 17}{res}{space 2} -5.70562{col 29}{space 2} 3.881385{col 40}{space 1}   -1.47{col 49}{space 3}0.142{col 57}{space 4}-13.32987{col 70}{space 3} 1.918625
+{txt}{space 8}2019 1  {c |}{col 17}{res}{space 2}-.5101818{col 29}{space 2} 1.660347{col 40}{space 1}   -0.31{col 49}{space 3}0.759{col 57}{space 4}-3.771618{col 70}{space 3} 2.751255
+{txt}{space 8}2020 1  {c |}{col 17}{res}{space 2}  -11.649{col 29}{space 2}  3.82095{col 40}{space 1}   -3.05{col 49}{space 3}0.002{col 57}{space 4}-19.15453{col 70}{space 3}-4.143469
+{txt}{space 8}2021 1  {c |}{col 17}{res}{space 2} 8.947292{col 29}{space 2}  3.98625{col 40}{space 1}    2.24{col 49}{space 3}0.025{col 57}{space 4} 1.117061{col 70}{space 3} 16.77752
+{txt}{space 15} {c |}
+{space 11}연령 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 7}연령제곱 {c |}{col 17}{res}{space 2}  .027712{col 29}{space 2} .0259491{col 40}{space 1}    1.07{col 49}{space 3}0.286{col 57}{space 4}  -.02326{col 70}{space 3} .0786841
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .1561447{col 29}{space 2} 2.295688{col 40}{space 1}    0.07{col 49}{space 3}0.946{col 57}{space 4}-4.353299{col 70}{space 3} 4.665588
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} 6.682284{col 29}{space 2} 2.470767{col 40}{space 1}    2.70{col 49}{space 3}0.007{col 57}{space 4}  1.82893{col 70}{space 3} 11.53564
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2} .3393334{col 29}{space 2} .9706776{col 40}{space 1}    0.35{col 49}{space 3}0.727{col 57}{space 4}-1.567379{col 70}{space 3} 2.246045
+{txt}{space 10}_cons {c |}{col 17}{res}{space 2}-74.83701{col 29}{space 2} 59.94398{col 40}{space 1}   -1.25{col 49}{space 3}0.212{col 57}{space 4}-192.5856{col 70}{space 3} 42.91157
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}      개인id{col 14}{c |}{space 1}      548{col 27}{space 1}      548{col 39}{result}{space 1}        0{col 53}{text}*{col 54}{c |}
+{res}{col 1}{text}        지역{col 14}{c |}{space 1}        7{col 27}{space 1}        1{col 39}{result}{space 1}        6{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+* = FE nested within cluster; treated as redundant for DoF computation
+{res}{txt}
+{com}. 
+. ** 2번. 가짜 기준연도 2017, Placebo Test -> 2018년도 × 자녀연령의 상호작용항의 계수가 통계적으로 유의미하지 않아야 함!
+. reghdfe 종속변수 ib2017.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 지역) vce(cluster 개인id)
+{res}{txt}(dropped 248 {browse "http://scorreia.com/research/singletons.pdf":singleton observations})
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 9 iterations)
+{res}{txt}note: {res}연령{txt} omitted because of collinearity
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     2,199
+{txt}Absorbing 2 HDFE groups{col 51}F({res}  15{txt},{res}    547{txt}){col 67}= {res}      6.11
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.8835
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.8430
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.2744
+{txt}{col 1}Number of clusters ({res}개인id{txt}) {col 30}= {res}       548{txt}{col 51}Root MSE{col 67}= {res}    7.2756
+
+{txt}{ralign 81:(Std. err. adjusted for {res:548} clusters in {res:개인id})}
+{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 17}{c |}{col 29}    Robust
+{col 1}       종속변수{col 17}{c |} Coefficient{col 29}  std. err.{col 41}      t{col 49}   P>|t|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}year {c |}
+{space 10}2016  {c |}{col 17}{res}{space 2} 3.509476{col 29}{space 2} 2.469307{col 40}{space 1}    1.42{col 49}{space 3}0.156{col 57}{space 4} -1.34101{col 70}{space 3} 8.359962
+{txt}{space 10}2018  {c |}{col 17}{res}{space 2}-2.590002{col 29}{space 2} 2.353278{col 40}{space 1}   -1.10{col 49}{space 3}0.272{col 57}{space 4} -7.21257{col 70}{space 3} 2.032567
+{txt}{space 10}2019  {c |}{col 17}{res}{space 2}-4.651745{col 29}{space 2} 4.614855{col 40}{space 1}   -1.01{col 49}{space 3}0.314{col 57}{space 4}-13.71675{col 70}{space 3} 4.413262
+{txt}{space 10}2020  {c |}{col 17}{res}{space 2}-7.620855{col 29}{space 2} 6.937428{col 40}{space 1}   -1.10{col 49}{space 3}0.272{col 57}{space 4}-21.24812{col 70}{space 3} 6.006406
+{txt}{space 10}2021  {c |}{col 17}{res}{space 2}-9.440841{col 29}{space 2}  9.29696{col 40}{space 1}   -1.02{col 49}{space 3}0.310{col 57}{space 4}-27.70295{col 70}{space 3} 8.821272
+{txt}{space 15} {c |}
+{space 5}1.자녀연령 {c |}{col 17}{res}{space 2}-2.656304{col 29}{space 2} 2.277569{col 40}{space 1}   -1.17{col 49}{space 3}0.244{col 57}{space 4}-7.130156{col 70}{space 3} 1.817549
+{txt}{space 15} {c |}
+{space 2}year#자녀연령 {c |}
+{space 8}2016 1  {c |}{col 17}{res}{space 2} 1.437867{col 29}{space 2} 2.003958{col 40}{space 1}    0.72{col 49}{space 3}0.473{col 57}{space 4}-2.498529{col 70}{space 3} 5.374263
+{txt}{space 8}2018 1  {c |}{col 17}{res}{space 2}  5.70562{col 29}{space 2} 3.881385{col 40}{space 1}    1.47{col 49}{space 3}0.142{col 57}{space 4}-1.918625{col 70}{space 3} 13.32987
+{txt}{space 8}2019 1  {c |}{col 17}{res}{space 2} 5.195438{col 29}{space 2} 4.111189{col 40}{space 1}    1.26{col 49}{space 3}0.207{col 57}{space 4}-2.880213{col 70}{space 3} 13.27109
+{txt}{space 8}2020 1  {c |}{col 17}{res}{space 2}-5.943381{col 29}{space 2} 3.945228{col 40}{space 1}   -1.51{col 49}{space 3}0.133{col 57}{space 4}-13.69303{col 70}{space 3} 1.806271
+{txt}{space 8}2021 1  {c |}{col 17}{res}{space 2} 14.65291{col 29}{space 2} 4.185888{col 40}{space 1}    3.50{col 49}{space 3}0.001{col 57}{space 4} 6.430529{col 70}{space 3}  22.8753
+{txt}{space 15} {c |}
+{space 11}연령 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 7}연령제곱 {c |}{col 17}{res}{space 2}  .027712{col 29}{space 2} .0259491{col 40}{space 1}    1.07{col 49}{space 3}0.286{col 57}{space 4}  -.02326{col 70}{space 3} .0786841
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .1561447{col 29}{space 2} 2.295688{col 40}{space 1}    0.07{col 49}{space 3}0.946{col 57}{space 4}-4.353299{col 70}{space 3} 4.665588
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} 6.682284{col 29}{space 2} 2.470767{col 40}{space 1}    2.70{col 49}{space 3}0.007{col 57}{space 4}  1.82893{col 70}{space 3} 11.53564
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2} .3393334{col 29}{space 2} .9706776{col 40}{space 1}    0.35{col 49}{space 3}0.727{col 57}{space 4}-1.567379{col 70}{space 3} 2.246045
+{txt}{space 10}_cons {c |}{col 17}{res}{space 2}-72.24701{col 29}{space 2} 57.82603{col 40}{space 1}   -1.25{col 49}{space 3}0.212{col 57}{space 4}-185.8353{col 70}{space 3} 41.34126
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}      개인id{col 14}{c |}{space 1}      548{col 27}{space 1}      548{col 39}{result}{space 1}        0{col 53}{text}*{col 54}{c |}
+{res}{col 1}{text}        지역{col 14}{c |}{space 1}        7{col 27}{space 1}        1{col 39}{result}{space 1}        6{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+* = FE nested within cluster; treated as redundant for DoF computation
+{res}{txt}
+{com}. 
+. ** 3번. 가짜 기준연도 2016, Placebo Test -> 2017년도 × 자녀연령의 상호작용항의 계수가 통계적으로 유의미하지 않아야 함!
+. reghdfe 종속변수 ib2016.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 지역) vce(cluster 개인id)
+{res}{txt}(dropped 248 {browse "http://scorreia.com/research/singletons.pdf":singleton observations})
+{res}{txt}({browse "http://scorreia.com/research/hdfe.pdf":MWFE estimator} converged in 9 iterations)
+{res}{txt}note: {res}연령{txt} omitted because of collinearity
+{res}
+{txt}HDFE Linear regression{col 51}Number of obs{col 67}= {res}     2,199
+{txt}Absorbing 2 HDFE groups{col 51}F({res}  15{txt},{res}    547{txt}){col 67}= {res}      6.11
+{txt}Statistics robust to heteroskedasticity{col 51}Prob > F{col 67}= {res}    0.0000
+{txt}{col 51}R-squared{col 67}= {res}    0.8835
+{txt}{col 51}Adj R-squared{col 67}= {res}    0.8430
+{txt}{col 51}Within R-sq.{col 67}= {res}    0.2744
+{txt}{col 1}Number of clusters ({res}개인id{txt}) {col 30}= {res}       548{txt}{col 51}Root MSE{col 67}= {res}    7.2756
+
+{txt}{ralign 81:(Std. err. adjusted for {res:548} clusters in {res:개인id})}
+{hline 16}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 17}{c |}{col 29}    Robust
+{col 1}       종속변수{col 17}{c |} Coefficient{col 29}  std. err.{col 41}      t{col 49}   P>|t|{col 57}     [95% con{col 70}f. interval]
+{hline 16}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 11}year {c |}
+{space 10}2017  {c |}{col 17}{res}{space 2}-3.509476{col 29}{space 2} 2.469307{col 40}{space 1}   -1.42{col 49}{space 3}0.156{col 57}{space 4}-8.359962{col 70}{space 3}  1.34101
+{txt}{space 10}2018  {c |}{col 17}{res}{space 2}-6.099478{col 29}{space 2} 4.706599{col 40}{space 1}   -1.30{col 49}{space 3}0.196{col 57}{space 4} -15.3447{col 70}{space 3} 3.145743
+{txt}{space 10}2019  {c |}{col 17}{res}{space 2}-8.161221{col 29}{space 2} 6.982772{col 40}{space 1}   -1.17{col 49}{space 3}0.243{col 57}{space 4}-21.87755{col 70}{space 3}  5.55511
+{txt}{space 10}2020  {c |}{col 17}{res}{space 2}-11.13033{col 29}{space 2} 9.310842{col 40}{space 1}   -1.20{col 49}{space 3}0.232{col 57}{space 4}-29.41971{col 70}{space 3} 7.159051
+{txt}{space 10}2021  {c |}{col 17}{res}{space 2}-12.95032{col 29}{space 2} 11.67288{col 40}{space 1}   -1.11{col 49}{space 3}0.268{col 57}{space 4}-35.87947{col 70}{space 3} 9.978838
+{txt}{space 15} {c |}
+{space 5}1.자녀연령 {c |}{col 17}{res}{space 2}-1.218437{col 29}{space 2} 2.260803{col 40}{space 1}   -0.54{col 49}{space 3}0.590{col 57}{space 4}-5.659356{col 70}{space 3} 3.222482
+{txt}{space 15} {c |}
+{space 2}year#자녀연령 {c |}
+{space 8}2017 1  {c |}{col 17}{res}{space 2}-1.437867{col 29}{space 2} 2.003958{col 40}{space 1}   -0.72{col 49}{space 3}0.473{col 57}{space 4}-5.374263{col 70}{space 3} 2.498529
+{txt}{space 8}2018 1  {c |}{col 17}{res}{space 2} 4.267753{col 29}{space 2} 3.208276{col 40}{space 1}    1.33{col 49}{space 3}0.184{col 57}{space 4}-2.034296{col 70}{space 3}  10.5698
+{txt}{space 8}2019 1  {c |}{col 17}{res}{space 2} 3.757572{col 29}{space 2} 3.417776{col 40}{space 1}    1.10{col 49}{space 3}0.272{col 57}{space 4}-2.956002{col 70}{space 3} 10.47115
+{txt}{space 8}2020 1  {c |}{col 17}{res}{space 2}-7.381247{col 29}{space 2} 3.771396{col 40}{space 1}   -1.96{col 49}{space 3}0.051{col 57}{space 4}-14.78944{col 70}{space 3} .0269457
+{txt}{space 8}2021 1  {c |}{col 17}{res}{space 2} 13.21505{col 29}{space 2} 3.940013{col 40}{space 1}    3.35{col 49}{space 3}0.001{col 57}{space 4} 5.475637{col 70}{space 3} 20.95445
+{txt}{space 15} {c |}
+{space 11}연령 {c |}{col 17}{res}{space 2}        0{col 29}{txt}  (omitted)
+{space 7}연령제곱 {c |}{col 17}{res}{space 2}  .027712{col 29}{space 2} .0259491{col 40}{space 1}    1.07{col 49}{space 3}0.286{col 57}{space 4}  -.02326{col 70}{space 3} .0786841
+{txt}{space 7}교육수준 {c |}{col 17}{res}{space 2} .1561447{col 29}{space 2} 2.295688{col 40}{space 1}    0.07{col 49}{space 3}0.946{col 57}{space 4}-4.353299{col 70}{space 3} 4.665588
+{txt}{space 1}로그가처분소득 {c |}{col 17}{res}{space 2} 6.682284{col 29}{space 2} 2.470767{col 40}{space 1}    2.70{col 49}{space 3}0.007{col 57}{space 4}  1.82893{col 70}{space 3} 11.53564
+{txt}num_child_7to18 {c |}{col 17}{res}{space 2} .3393334{col 29}{space 2} .9706776{col 40}{space 1}    0.35{col 49}{space 3}0.727{col 57}{space 4}-1.567379{col 70}{space 3} 2.246045
+{txt}{space 10}_cons {c |}{col 17}{res}{space 2}-68.73753{col 29}{space 2}   55.599{col 40}{space 1}   -1.24{col 49}{space 3}0.217{col 57}{space 4}-177.9512{col 70}{space 3} 40.47615
+{txt}{hline 16}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}
+{txt}Absorbed degrees of freedom:
+{res}{col 1}{text}{hline 13}{c TT}{hline 12}{hline 12}{hline 14}{hline 1}{c TRC}
+{col 1}{text} Absorbed FE{col 14}{c |} Categories{col 27} - Redundant{col 39}  = Num. Coefs{col 54}{c |}
+{res}{col 1}{text}{hline 13}{c +}{hline 12}{hline 12}{hline 14}{hline 1}{c RT}
+{col 1}{text}      개인id{col 14}{c |}{space 1}      548{col 27}{space 1}      548{col 39}{result}{space 1}        0{col 53}{text}*{col 54}{c |}
+{res}{col 1}{text}        지역{col 14}{c |}{space 1}        7{col 27}{space 1}        1{col 39}{result}{space 1}        6{col 53}{text} {col 54}{c |}
+{res}{col 1}{text}{hline 13}{c BT}{hline 12}{hline 12}{hline 14}{hline 1}{c BRC}
+* = FE nested within cluster; treated as redundant for DoF computation
+{res}{txt}
+{com}. 
+{txt}end of do-file
+
+{com}. log close
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}C:\Users\rag95\OneDrive\바탕 화면\Main Results.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}22 Feb 2026, 23:32:23
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}
