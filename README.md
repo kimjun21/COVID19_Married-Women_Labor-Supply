@@ -3,3 +3,5 @@
 2) Year-Specific Inverse Probability Weighting (수정)
 3) Year-Specific IPW & Event-Study Difference-in-Differences Estimation (수정)
 4) Placebo Test (수정)
+
+++ [Output] Main Results: 2) ~ 4) Command를 수행하여 도출된 Stata Output
