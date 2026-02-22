@@ -11,4 +11,5 @@
 
 * ib2019.year##i.자녀연령: 2019년을 기준 연도로 연도에 따른 미취학 자녀 유무별 유급노동시간의 변화를 추정함. 2020년도 × 자녀연령 상호작용항이 음의 계수를 가지고 통계적으로 유의미한 값을 가지는지를 검증함.
 
-reghdfe 종속변수 ib2019.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 업종_더미 직종_더미 지역) vce(cluster 개인id)
+
+reghdfe 종속변수 ib2019.year##i.자녀연령 연령 연령제곱 교육수준 로그가처분소득 num_child_7to18 if inrange(year,2016,2021) [pw=ipw], absorb(개인id 지역) vce(cluster 개인id)
