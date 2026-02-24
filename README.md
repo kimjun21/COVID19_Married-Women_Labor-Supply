@@ -7,4 +7,7 @@
 4) Placebo Test (수정)
 
 ++ 'Results Coding' folder
-Result.doxc file에 포함된 표와 그림의 산출에 쓰인 coding
+: Results.docx file에서 표 & 그림의 산출에 쓰인 coding
+
+++ 'Result' word file
+: 본 연구에서 제시될 표 & 그림 모음
