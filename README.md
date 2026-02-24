@@ -9,5 +9,5 @@
 ++ 'Results Coding' folder
 : Results.docx file에서 표 & 그림의 산출에 쓰인 coding
 
-++ 'Result' word file
-: 본 연구에서 제시될 표 & 그림 모음
+++ 'Results' word file
+: 본 연구에서 활용될 표 & 그림
